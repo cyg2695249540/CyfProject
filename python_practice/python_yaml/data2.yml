@@ -1,0 +1,8 @@
+Person:
+  -
+    name: 小明
+    age: 16
+    habit: 吃饭
+  - name: 小红
+    age: 14
+    habit: 睡觉

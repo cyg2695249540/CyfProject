@@ -15,7 +15,7 @@ def fight():
     my_hp = 1000
     my_power = 200
     your_hp = 1000
-    your_power = 199
+    your_power = 200
     my_final_hp = my_hp - your_power
     your_final_hp = your_hp - my_power
     if my_final_hp > your_final_hp:
@@ -23,6 +23,7 @@ def fight():
     elif my_final_hp < your_final_hp:
         print(("你赢了"))
     else:
-        print("平局")
+        raise Exception("no peace,不要平局,战斗到最后一刻")
+        # print("平局")
 
 fight()
