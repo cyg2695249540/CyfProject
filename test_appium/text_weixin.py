@@ -5,6 +5,8 @@
 # @Time     : 2020/9/25 15:14
 from time import sleep
 
+import pytest
+import yaml
 from appium import webdriver
 # This sample code uses the Appium python client
 # pip install Appium-Python-Client
@@ -14,6 +16,14 @@ from appium import webdriver
 from appium.webdriver.common.mobileby import MobileBy
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
+
+
+def get_datas():
+    with open("./datas/addcontact.yml", encoding="utf-8") as f:
+        contact_datas = yaml.safe_load(f)
+        addcontact = contact_datas['add']
+        delcontact = contact_datas['del']
+    return addcontact, delcontact
 
 
 class TestWeiXin:
@@ -40,8 +50,7 @@ class TestWeiXin:
         self.driver.implicitly_wait(5)
 
     def teardown(self):
-        # self.driver.quit()
-        pass
+        self.driver.back()
 
     def test_send_message(self):
         _sendTtext = "test001"
@@ -72,11 +81,8 @@ class TestWeiXin:
         result = self.driver.find_element(MobileBy.ID, "os").text
         assert "外出打卡成功" == result
 
-    def test_addcontact(self):
-        _name = "LCQ"
-        _gander = "女"
-        _phonenum = "13711111111"
-
+    @pytest.mark.parametrize('name,gander,phonenum', get_datas()[0])
+    def test_addcontact(self, name, gander, phonenum):
         self.driver.find_element(MobileBy.XPATH,
                                  "//*[@resource-id='com.tencent.wework:id/ec6' and @text='通讯录']").click()
         # self.driver.find_element(MobileBy.XPATH, "//*[@text='添加成员']").click()
@@ -89,18 +95,46 @@ class TestWeiXin:
         self.driver.find_element(MobileBy.XPATH, "//*[@text='手动输入添加']").click()
         self.driver.find_element(MobileBy.XPATH,
                                  "//*[contains(@text,'姓名')]/..//*[@class='android.widget.EditText']").send_keys(
-            _name)
+            name)
         self.driver.find_element(MobileBy.XPATH, "//*[@text='男']").click()
-        if _gander == "女":
-            self.driver.find_element(MobileBy.XPATH, "//*[@text='女']").click()
+        if gander == "女":
+            _searchtext = (MobileBy.XPATH, "//*[@text='女']")
+            element = WebDriverWait(self.driver, 10).until(expected_conditions.element_to_be_clickable(_searchtext))
+            element.click()
         else:
-            self.driver.find_element(MobileBy.XPATH, "//*[@text='男']").click()
+            element = WebDriverWait(self.driver, 10).until(lambda x: x.find_element(MobileBy.XPATH, "//*[@text='男']"))
+            element.click()
         self.driver.find_element(MobileBy.XPATH,
                                  "//*[contains(@text,'手机') and @class='android.widget.TextView']/..//*[@class='android.widget.EditText']").send_keys(
-            _phonenum)
+            phonenum)
         self.driver.find_element(MobileBy.XPATH, "//*[@text='保存']").click()
         # sleep(2)
         # # 获取网页源代码，寻找Toast
         # print(self.driver.page_source)
         mytoast = self.driver.find_element(MobileBy.XPATH, "//*[@class='android.widget.Toast']").text
         assert mytoast == "添加成功"
+
+    @pytest.mark.parametrize('name', get_datas()[1])
+    def test_deletecontact(self, name):
+        self.driver.find_element(MobileBy.XPATH, "//*[@text='通讯录']").click()
+        self.driver.find_element(MobileBy.ID, "com.tencent.wework:id/hxw").click()
+        self.driver.find_element(MobileBy.ID, "com.tencent.wework:id/ghu").send_keys(name)
+        sleep(2)
+        eles = self.driver.find_elements(MobileBy.XPATH, f"//*[@text='{name}']")
+        before = len(eles)
+        if before == 1:
+            print("没有可删除人员")
+
+        else:
+            # self.driver.find_element(MobileBy.XPATH,
+            #                          f"//*[@text='{name}' and @class='android.widget.TextView']").click()
+            eles[1].click()
+            self.driver.find_element(MobileBy.ID, "com.tencent.wework:id/hxm").click()
+            self.driver.find_element(MobileBy.XPATH, "//*[@text='编辑成员']").click()
+            self.driver.find_element(MobileBy.ANDROID_UIAUTOMATOR,
+                                     'new UiScrollable(new UiSelector().scrollable(true).instance(0)).scrollIntoView(new UiSelector().text("删除成员").instance(0));').click()
+            self.driver.find_element(MobileBy.XPATH, "//*[@text='确定']").click()
+            sleep(5)
+            eles2 = self.driver.find_elements(MobileBy.XPATH, f"//*[@text='{name}']")
+            after = len(eles2)
+            assert after == before - 1
