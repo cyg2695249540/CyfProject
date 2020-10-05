@@ -19,4 +19,5 @@ class Base():
         self.driver.maximize_window()
 
     def teardown(self):
-        self.driver.quit()
+        # self.driver.quit()
+        pass
